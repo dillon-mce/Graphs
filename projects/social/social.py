@@ -1,4 +1,5 @@
-
+import random
+from util import Queue
 
 class User:
     def __init__(self, name):
@@ -47,8 +48,39 @@ class SocialGraph:
         # !!!! IMPLEMENT ME
 
         # Add users
+        for i in range(numUsers):
+            self.addUser(f'User {i + 1}')
 
         # Create friendships
+
+        #  O(n^2) Method
+        # possibleFriendships = []
+        # for userID in self.users:
+        #     for frientID in range(userID + 1, self.lastID + 1):
+        #         possibleFriendships.append((userID, frientID))
+
+        # random.shuffle(possibleFriendships)
+
+        # for friendship_index in range(avgFriendships * numUsers // 2):
+        #     friendship = possibleFriendships[friendship_index]
+        #     self.addFriendship(friendship[0], friendship[1])
+
+        # O(n) Method, way faster. Seems like roughly the same distribution though.
+        count = 0
+        loops = 0
+        limit = avgFriendships * numUsers // 2
+
+        while count < limit:
+            loops += 1
+            friend1 = random.randint(1, self.lastID)
+            friend2 = random.randint(1, self.lastID)
+
+            if friend1 == friend2 or (self.friendships.get(friend1) is not None and friend2 in self.friendships[friend1]):
+                continue
+            self.addFriendship(friend1, friend2)
+            count += 1
+
+        print(f'Took {loops} loops')
 
     def getAllSocialPaths(self, userID):
         """
@@ -61,12 +93,34 @@ class SocialGraph:
         """
         visited = {}  # Note that this is a dictionary, not a set
         # !!!! IMPLEMENT ME
+        q = Queue()
+        q.enqueue(userID)
+
+        while q.size() > 0:
+            v = q.dequeue()
+            visited.setdefault(v, [])
+            visited[v].append(v)
+            for neighbor in self.friendships[v]:
+                if not visited.get(neighbor):
+                    visited.setdefault(neighbor, visited[v].copy())
+                    q.enqueue(neighbor)
+
         return visited
 
 
 if __name__ == '__main__':
     sg = SocialGraph()
-    sg.populateGraph(10, 2)
+    sg.populateGraph(1000, 5)
     print(sg.friendships)
     connections = sg.getAllSocialPaths(1)
     print(connections)
+
+    # for userID in sg.users:
+    #     connections = sg.getAllSocialPaths(userID)
+    #     percentage = (len(connections) / len(sg.users)) * 100
+    #     average_degrees = 0
+    #     for path in connections.values():
+    #         average_degrees += len(path) - 1
+    #     average_degrees /= len(connections)
+        
+    #     print(f'User {userID} is connected to {percentage}% of users, with an average of {average_degrees} degrees of separation.')
