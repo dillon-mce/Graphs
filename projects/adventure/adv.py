@@ -29,21 +29,52 @@ traversalGraph = {}
 
 def buildTraversalGraph():
     global traversalPath
-    global traversalGraph
     nearest_empty_path = find_nearest_empty_path(player.currentRoom)
     while nearest_empty_path:
+        
+        try_remaining = try_remaining_directions()
+        while try_remaining:
+            try_remaining = try_remaining_directions()
+
+        nearest_empty_path = find_nearest_empty_path(player.currentRoom)
+        if nearest_empty_path is None:
+            break
         traversalPath += nearest_empty_path
         for direction in nearest_empty_path:
             prev = player.currentRoom
             player.travel(direction)
-            if prev is player.currentRoom:
-                traversalGraph[player.currentRoom.id][direction] = None
-            else:
-                traversalGraph.setdefault(player.currentRoom.id, {'n': '?', 's': '?', 'e': '?', 'w': '?'})
-                traversalGraph[prev.id][direction] = player.currentRoom.id
-                traversalGraph[player.currentRoom.id][get_opposite_direction(direction)] = prev.id
+            update_rooms(direction, prev, player.currentRoom)
 
-        nearest_empty_path = find_nearest_empty_path(player.currentRoom)
+        
+
+def try_remaining_directions(previous=None):
+    global traversalGraph
+    global traversalPath
+    directions = {"n", "s", "e", "w"}
+    if previous:
+        directions.remove(previous)
+
+    for direction in directions:
+        if traversalGraph[player.currentRoom.id][direction] is not "?":
+            continue
+        last_room = player.currentRoom
+        player.travel(direction)
+        if update_rooms(direction, last_room, player.currentRoom):
+            traversalPath.append(direction)
+            return True
+    return False
+        
+
+def update_rooms(direction, last_room, current_room):
+    global traversalGraph
+    if last_room is current_room:
+        traversalGraph[current_room.id][direction] = None
+        return False
+    else:
+        traversalGraph.setdefault(current_room.id, {'n': '?', 's': '?', 'e': '?', 'w': '?'})
+        traversalGraph[last_room.id][direction] = current_room.id
+        traversalGraph[current_room.id][get_opposite_direction(direction)] = last_room.id
+        return True
 
 def get_opposite_direction(direction):
     if direction is "s":
