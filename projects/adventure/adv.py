@@ -1,6 +1,7 @@
 from room import Room
 from player import Player
 from world import World
+from util import Queue
 
 import random
 
@@ -18,13 +19,68 @@ roomGraph={494: [(1, 8), {'e': 457}], 492: [(1, 20), {'e': 400}], 493: [(2, 5), 
 world.loadGraph(roomGraph)
 
 # UNCOMMENT TO VIEW MAP
-world.printRooms()
+# world.printRooms()
 
 player = Player("Name", world.startingRoom)
 
 traversalPath = []
 
+traversalGraph = {}
 
+def buildTraversalGraph():
+    global traversalPath
+    global traversalGraph
+    nearest_empty_path = find_nearest_empty_path(player.currentRoom)
+    while nearest_empty_path:
+        traversalPath += nearest_empty_path
+        for direction in nearest_empty_path:
+            prev = player.currentRoom
+            player.travel(direction)
+            if prev is player.currentRoom:
+                traversalGraph[player.currentRoom.id][direction] = None
+            else:
+                traversalGraph.setdefault(player.currentRoom.id, {'n': '?', 's': '?', 'e': '?', 'w': '?'})
+                traversalGraph[prev.id][direction] = player.currentRoom.id
+                traversalGraph[player.currentRoom.id][get_opposite_direction(direction)] = prev.id
+
+        nearest_empty_path = find_nearest_empty_path(player.currentRoom)
+
+def get_opposite_direction(direction):
+    if direction is "s":
+        return "n"
+    elif direction is "n":
+        return "s"
+    elif direction is "e":
+        return "w"
+    elif direction is "w":
+        return "e"
+    else:
+        return None
+
+def find_nearest_empty_path(current):
+    global traversalGraph
+    queue = Queue()
+    queue.enqueue(current.id)
+    visited = {}
+
+    while queue.size() > 0:
+        room = queue.dequeue()
+        visited.setdefault(room, [])
+        traversalGraph.setdefault(room, {'n': '?', 's': '?', 'e': '?', 'w': '?'})
+        for (key, value) in traversalGraph[room].items():
+            if value is None:
+                continue
+            if value is '?':
+                visited[room].append(key)
+                return visited[room]
+            else:
+                if value not in visited:
+                    visited.setdefault(value, visited[room].copy())
+                    visited[value].append(key)
+                    queue.enqueue(value)
+    return None
+        
+buildTraversalGraph()
 
 # TRAVERSAL TEST
 visited_rooms = set()
