@@ -30,40 +30,48 @@ traversalGraph = {}
 def buildTraversalGraph():
     global traversalPath
     nearest_empty_path = find_nearest_empty_path(player.currentRoom)
-    while nearest_empty_path:
+    while True:
         
         try_remaining = try_remaining_directions()
         while try_remaining:
+            traversalPath.append(try_remaining)
             try_remaining = try_remaining_directions()
+            # print(traversalPath)
 
+        # print(traversalPath)
+        # print()
         nearest_empty_path = find_nearest_empty_path(player.currentRoom)
         if nearest_empty_path is None:
             break
         traversalPath += nearest_empty_path
         for direction in nearest_empty_path:
-            prev = player.currentRoom
+            # prev = player.currentRoom
             player.travel(direction)
-            update_rooms(direction, prev, player.currentRoom)
+        # if not update_rooms(direction, prev, player.currentRoom):
+            
 
-        
-
-def try_remaining_directions(previous=None):
+def try_remaining_directions():
     global traversalGraph
-    global traversalPath
     directions = {"n", "s", "e", "w"}
-    if previous:
-        directions.remove(previous)
-
+    next_direction = None
     for direction in directions:
+        traversalGraph.setdefault(player.currentRoom.id, {'n': '?', 's': '?', 'e': '?', 'w': '?'})
         if traversalGraph[player.currentRoom.id][direction] is not "?":
             continue
         last_room = player.currentRoom
         player.travel(direction)
         if update_rooms(direction, last_room, player.currentRoom):
-            traversalPath.append(direction)
-            return True
-    return False
+            next_direction = direction
+            player.travel(get_opposite_direction(direction))
+    if next_direction:
+        player.travel(next_direction)
+    # print_traversal_graph()
+    return next_direction
         
+def print_traversal_graph():
+    for (key, value) in traversalGraph.items():
+        print(f'{key}: {value}')
+    print()
 
 def update_rooms(direction, last_room, current_room):
     global traversalGraph
@@ -102,7 +110,7 @@ def find_nearest_empty_path(current):
             if value is None:
                 continue
             if value is '?':
-                visited[room].append(key)
+                # visited[room].append(key)
                 return visited[room]
             else:
                 if value not in visited:
@@ -112,6 +120,7 @@ def find_nearest_empty_path(current):
     return None
         
 buildTraversalGraph()
+# print(traversalPath)
 
 # TRAVERSAL TEST
 visited_rooms = set()
