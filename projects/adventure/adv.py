@@ -24,53 +24,54 @@ world.loadGraph(roomGraph)
 player = Player("Name", world.startingRoom)
 
 traversalPath = []
-
 traversalGraph = {}
 
 def buildTraversalGraph():
     global traversalPath
-    nearest_empty_path = find_nearest_empty_path(player.currentRoom)
-    while nearest_empty_path:
-        
-        try_remaining = try_remaining_directions()
-        while try_remaining:
-            try_remaining = try_remaining_directions()
+    while True:
+        # Keep moving until you hit a dead end.
+        next_move = try_all_directions()
+        while next_move:
+            traversalPath.append(next_move)
+            next_move = try_all_directions()
 
+        # Find the nearest room with a question mark and move there.
         nearest_empty_path = find_nearest_empty_path(player.currentRoom)
         if nearest_empty_path is None:
             break
         traversalPath += nearest_empty_path
         for direction in nearest_empty_path:
-            prev = player.currentRoom
             player.travel(direction)
-            update_rooms(direction, prev, player.currentRoom)
-
-        
-
-def try_remaining_directions(previous=None):
+            
+def try_all_directions():
     global traversalGraph
-    global traversalPath
     directions = {"n", "s", "e", "w"}
-    if previous:
-        directions.remove(previous)
-
+    next_direction = None
     for direction in directions:
+        traversalGraph.setdefault(player.currentRoom.id, {'n': '?', 's': '?', 'e': '?', 'w': '?'})
         if traversalGraph[player.currentRoom.id][direction] is not "?":
+            # If it isn't a question mark, we've already explored that exit.
             continue
         last_room = player.currentRoom
         player.travel(direction)
         if update_rooms(direction, last_room, player.currentRoom):
-            traversalPath.append(direction)
-            return True
-    return False
-        
+        # If there is a room there to travel to, update the rooms
+        # but move back to the room we're checking for now
+            next_direction = direction
+            player.travel(get_opposite_direction(direction))
+    if next_direction:
+        # If there was a room to move to, move there before we return
+        player.travel(next_direction)
+    return next_direction
 
 def update_rooms(direction, last_room, current_room):
     global traversalGraph
     if last_room is current_room:
+    # If the last room and the current room are the same, it means our move didn't work
         traversalGraph[current_room.id][direction] = None
         return False
     else:
+    # Otherwise it means there is a room and we should update both in the traversal graph. 
         traversalGraph.setdefault(current_room.id, {'n': '?', 's': '?', 'e': '?', 'w': '?'})
         traversalGraph[last_room.id][direction] = current_room.id
         traversalGraph[current_room.id][get_opposite_direction(direction)] = last_room.id
@@ -96,24 +97,29 @@ def find_nearest_empty_path(current):
 
     while queue.size() > 0:
         room = queue.dequeue()
+        # Visited keeps track of the rooms we've already visited and the path to them.
         visited.setdefault(room, [])
-        traversalGraph.setdefault(room, {'n': '?', 's': '?', 'e': '?', 'w': '?'})
         for (key, value) in traversalGraph[room].items():
             if value is None:
+                # If the value is none, we already know there's no room there.
                 continue
             if value is '?':
-                visited[room].append(key)
+                # If the value is '?', we are in the nearest room with an unknown exit.
+                # Return the path to this room
                 return visited[room]
             else:
+                # Otherwise, if it is a room we haven't already visited, we need to add it to the queue
+                # And update the path to that room
                 if value not in visited:
                     visited.setdefault(value, visited[room].copy())
                     visited[value].append(key)
                     queue.enqueue(value)
+    # If the queue reaches zero, it means there are no question marks left in the graph.
     return None
         
-buildTraversalGraph()
 
 # TRAVERSAL TEST
+buildTraversalGraph()
 visited_rooms = set()
 player.currentRoom = world.startingRoom
 visited_rooms.add(player.currentRoom)
@@ -127,8 +133,6 @@ if len(visited_rooms) == len(roomGraph):
 else:
     print("TESTS FAILED: INCOMPLETE TRAVERSAL")
     print(f"{len(roomGraph) - len(visited_rooms)} unvisited rooms")
-
-
 
 #######
 # UNCOMMENT TO WALK AROUND
